@@ -1,0 +1,263 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Apr 26 09:21:27 2019
+
+@author: Alain
+"""
+
+import numpy as np
+import networkx as nx
+import matplotlib.pyplot as plt
+import random
+from numpy import cumsum, array
+
+
+class Tests(object):
+    '''测试一个小模型，其中只有6个点，且3均有不同程度的不守信用的推荐信息'''
+    def page_rank_recommendation(self):
+         self.graph=nx.DiGraph()#生成一个可以空图,可以添加，删除节点，权重
+         self.nodes=["A","B","C","D","E","F","G","H","I","J","K"] #生成11个点，她们可以是信息的推荐者与需求者
+         '''Preset information about all doctors'''
+         #self.nodes_description={"Orthopedics":{"A":0.80,"B":0.25,"C":0.9,"D":0.5},"Dentistry":{"D":0.5,"E":0.7,"F":0.28,"G":0.9},"ENT":{"H":0.60,"I":0.9,"J":0.35,"K":0.4}}
+         self.nodes_description={"A":0.80,"B":0.2,"C":0.9,"D":0.1,"E":0.7,"F":0.3,"G":0.85,"H":0.60,"I":0.4,"J":0.15,"K":0.5}
+         #self.nodes_Befree={"A":0.70,"B":0.50,"C":0.60,"D":0.8,"E":0.65,"F":0.9,"G":0.4,"H":0.55,"I":0.45,"J":0.85,"K":0.9}
+         self.nodes_Befree=0.5
+         #self.graph.add_nodes_from(self.nodes)
+         self.success_times=0
+         self.failure_times=0
+         self.success_times1=0
+         self.failure_times1=0
+         self.weight=0
+         self.success_rate=[]
+         self.success_rate1=[]
+         zeros = [0 for _ in range(len(self.nodes))]
+         self.memory=dict(zip(list(self.nodes), zeros))
+         self.memories=dict(zip(list(self.nodes), dict(self.memory)))
+         self.MEMORIES={}
+         #print("记忆",self.memory,self.memories)
+        
+         self.forgetting_factor=0.6
+         self.Total_interaction_time=1000
+         for node1 in self.nodes:
+             self.memories[node1]={}
+             for node2 in self.nodes:
+                 self.memories[node1][node2]={}
+                 
+                 
+         for node1 in self.nodes:
+             self.MEMORIES[node1]={}
+             for node2 in self.nodes:
+                 self.MEMORIES[node1][node2]=0             
+        
+         
+         Round=0
+         while Round<self.Total_interaction_time:
+             #if Round>500:
+             #   self.nodes_description={"A":0.80,"B":0.2,"C":0.1,"D":0.1,"E":0.7,"F":0.3,"G":0.85,"H":0.60,"I":0.4,"J":0.15,"K":0.5}
+             patient,Free_doctors,Doctor=self.needs_doctors()
+             if Doctor==None:
+                 self.failure_times+=1
+                 continue
+             self.update_memories(patient,Doctor)
+             self.graph.add_weighted_edges_from([(patient,Doctor,self.weight)])
+             Round+=1
+             self.success_rate.append(self.success_times/(self.success_times+self.failure_times))
+             #print("成功率",self.success_times/(self.success_times+self.failure_time))
+         #print("记忆",self.MEMORIES)
+         with open("change.txt","a") as f:
+             for word in self.success_rate:
+                f.write(str(word))
+                f.write('\n')
+             f.write(">>>>>>>>分隔符<<<<<<<<<<<<<<<<")
+             f.close()
+
+         '''fig1=plt.figure()
+         left, bottom, width, height = -0.2,0.5,0.8,0.8
+         ax1 = fig1.add_axes([left,bottom,width,height])
+         ax1.plot(range(0,len(self.success_rate)), self.success_rate,color='blue', label='Forgetting factor=0.1')
+         ax1.plot(range(0,len(self.success_rate1)), self.success_rate1,color='red', label='Forgetting factor=0.2')
+         ax1.set_xlabel("Rounds")
+         ax1.set_ylabel("Success Rate")
+         ax1.set_title('Global success Rate')
+         print("记忆",self.success_rate[-1],random.random())
+         
+         fig1=plt.figure()
+         left, bottom, width, height = -0.5,0.5,1,1
+         ax1 = fig1.add_axes([left,bottom,width,height])
+         ax1.plot(range(0,len(self.success_rate)), self.success_rate,color='blue', label='Proposed method')    
+         #ax1.plot(range(0,len(self.success_rate1)), self.success_rate1,color='red', label='Random selection')
+         ax1.legend()
+         ax1.set_xlabel("Rounds")
+         ax1.set_ylabel("Success Rate")
+         ax1.set_title('Global success Rate')
+         
+         A=list(self.MEMORIES.values())
+         r=[]
+         for ii in range(len(A)):
+             value=[]
+             for a in A:
+                 value.append(list(a.values())[ii])
+             r.append(value)
+         print("r",r)
+             
+             
+         bott=np.array([0,0,0,0,0,0,0,0,0,0,0])
+         plt.bar(range(len(self.nodes)), r[0], label=self.nodes[0],tick_label = self.nodes)
+         for i in range(1,len(r)):
+            bott=np.sum([bott,r[i-1]],axis = 0)
+            plt.bar(range(len(self.nodes)), r[i], label=self.nodes[i],bottom=bott, tick_label =list(self.nodes_description))
+         plt.legend(loc=[1, 0])
+         plt.show()'''
+
+            
+    def needs_doctors(self):
+        '''this function explains who need a doctor: ##patiend
+        what kind of doctor the patient needs?: ##three different kinds
+        among all the professional doctors, who are available/free
+        Finally, patient chooses a doctor'''
+        patient=random.choice(self.nodes) #who needs a doctor
+        #category=random.choice(list(self.nodes_description.keys())) #what kind of doctor it needs
+        Free_doctors=[doctor for doctor in self.nodes_description if random.random()<self.nodes_Befree and doctor!=patient] #doctors who are free
+        if len(Free_doctors)==0:
+            self.failure_times1+=1
+        else:
+            doc=random.choice(Free_doctors)
+            c = random.uniform(0, 1)
+            if c<self.nodes_description[doc]:
+                self.success_times1+=1
+            else:
+                self.failure_times1+=1
+        self.success_rate1.append(self.success_times1/(self.success_times1+self.failure_times1))
+        
+
+        Not_exist_node=[node for node in Free_doctors if node not in self.graph.nodes()]
+        self.graph.add_nodes_from(Not_exist_node)#如果提供服务的医生还不在系统中，添加这个医生到系统    
+        Doctor=self.choose_a_doctor(patient,Free_doctors)
+        if Doctor!=[]:
+            try:
+                self.MEMORIES[patient][Doctor]+=1
+            except KeyError:
+                self.MEMORIES[patient][Doctor]=1    
+        return patient,Free_doctors,Doctor
+        
+    
+    def choose_a_doctor(self,patient,Free_doctors):
+        '''Here the patient selects the most reliable doctor based on its historical interactors!
+        as a result, patient ranks all the doctors
+        then the interactions between patients are adopted as the input, however, even we 
+        know the recommendation of the exact doctor, we are not familar with the patient
+        Therefore, we use monte carlo PageRank algorithm
+        Remember the selected nodes, the result for the next recommendation'''
+        WalkerPR=Random_walk_recommendation(self.graph, patient, 10, 0.7)
+        WalkerPR.random_walk()
+        page_ranks = WalkerPR.compute_ranks(Free_doctors)
+        if len(page_ranks)==0:
+            Node=None
+        else:
+            Node=max(page_ranks, key=page_ranks.get)
+        return Node
+    
+    def update_memories(self,patient,Doctor):
+        "update the historical historical interaction, everyone only remembers the recenet 10 interction."
+        update_interactions={}
+        c = random.uniform(0, 1)
+        if c<self.nodes_description[Doctor]:
+            update_interactions[1]="Success"
+            self.success_times+=1
+        else:
+            update_interactions[1]="Failure"
+            self.failure_times+=1
+        try:
+            History=self.memories[patient][Doctor] #首先更新已经有了的记忆,往后挪一位
+            del self.memories[patient][Doctor]
+            for time in History:
+                if time<=9:
+                    update_interactions[time+1]=History[time]  
+            self.memories[patient][Doctor]=update_interactions
+        except KeyError:
+            self.memories[patient][Doctor]=update_interactions
+        self.calculate_weight(update_interactions)
+        #print("更新记忆",self.memories)
+        return 
+    
+    def calculate_weight(self,interactions):
+        success_times=[time for time in interactions if interactions[time]=="Success"]
+        failure_times=[time for time in interactions if interactions[time]=="Failure"]
+        success_score=[self.forgetting_factor**time for time in success_times]
+        failure_score=[self.forgetting_factor**time for time in failure_times]
+        success_score_sum=sum(success_score)
+        failure_score_sum=sum(failure_score)
+        self.weight=success_score_sum/(success_score_sum+failure_score_sum+0.00001)
+        return
+                
+class Random_walk_recommendation(object):
+    def __init__(self,graph,nodes,random_walk_number,reset_probability):
+        self.graph=graph
+        self.nodes=nodes
+        self.random_walk_number=random_walk_number
+        self.reset_probability=reset_probability
+        self.random_walk_paths=[]
+        self.random_walk_path=[]
+        
+    def random_walk(self):
+        for node in self.graph.nodes():
+            self.random_walk_path=[]
+            while len(self.random_walk_path)<self.random_walk_number:
+                self.random_walk_once(node)
+            self.random_walk_paths.append(self.random_walk_path)
+        return
+    
+    def random_walk_once(self,current_node):
+        random_walk=[current_node]
+        c = random.uniform(0, 1)
+        while c > self.reset_probability:
+            if len(list(self.graph.neighbors(random_walk[-1]))) > 0:
+                current_node = random_walk[-1]
+                current_neighbors = list(self.graph.neighbors(current_node))
+                current_edge_weights = array([self.graph[current_node][neighbor]['weight'] for neighbor in current_neighbors])
+                cumulated_edge_weights = cumsum(current_edge_weights)
+                if cumulated_edge_weights[-1] == 0:
+                    break
+                random_id = list(cumulated_edge_weights < (random.uniform(0, 1) * cumulated_edge_weights[-1])).index(False)
+                next_node = current_neighbors[random_id]
+                random_walk.append(next_node)
+                c = random.uniform(0, 1)
+            else:
+                break
+        self.random_walk_path.append(random_walk)
+        return
+        
+    def compute_ranks(self,Free_doctors):
+        """
+        Determines the ranks based the random walks in the list self.random_walk_paths
+        :return: A dictionary of available doctors and corresponding page ranks value
+        """
+        zeros = [0 for _ in range(len(list(Free_doctors)))]
+        page_ranks = dict(zip(list(Free_doctors), zeros)) #zip()打包为元组的列表，dic()生成字典
+        visit_times = dict(zip(list(Free_doctors), zeros))
+        nodes_in_random_walks=[]
+        for random_walk_path in self.random_walk_paths:
+            for random_walk in random_walk_path:
+                nodes_in_random_walks.extend(random_walk)
+        for node in Free_doctors:
+            visit_times[node] = nodes_in_random_walks.count(node)
+        #print("visit_times",visit_times)
+        for node in Free_doctors:
+            try:
+                page_ranks[node] = float(visit_times[node]) / sum(visit_times.values())
+            except ZeroDivisionError:
+                print("List of visit times is empty...")
+        return page_ranks
+    
+    def add_weight_to_edge(self,patient,doctor,weight):
+        if self.graph.has_edge(patient,doctor):
+            self.graph[patient][doctor]['weight'] = weight
+        else:
+            edge = (patient,doctor, weight)
+            self.graph.add_weighted_edges_from([edge])
+        return
+    
+        
+one=Tests()
+one.page_rank_recommendation()
+    
