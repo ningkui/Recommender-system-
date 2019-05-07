@@ -34,7 +34,6 @@ class Tests(object):
          self.memory=dict(zip(list(self.nodes), zeros))
          self.memories=dict(zip(list(self.nodes), dict(self.memory)))
          self.MEMORIES={}
-         #print("记忆",self.memory,self.memories)
         
          self.forgetting_factor=0.6
          self.Total_interaction_time=1000
@@ -64,7 +63,7 @@ class Tests(object):
              self.success_rate.append(self.success_times/(self.success_times+self.failure_times))
              #print("成功率",self.success_times/(self.success_times+self.failure_time))
          #print("记忆",self.MEMORIES)
-         with open("change.txt","a") as f:
+         with open("changes.txt","a") as f:
              for word in self.success_rate:
                 f.write(str(word))
                 f.write('\n')
