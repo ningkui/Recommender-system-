@@ -227,10 +227,6 @@ class Random_walk_recommendation(object):
         return
         
     def compute_ranks(self,Free_doctors):
-        """
-        Determines the ranks based the random walks in the list self.random_walk_paths
-        :return: A dictionary of available doctors and corresponding page ranks value
-        """
         zeros = [0 for _ in range(len(list(Free_doctors)))]
         page_ranks = dict(zip(list(Free_doctors), zeros)) #zip()打包为元组的列表，dic()生成字典
         visit_times = dict(zip(list(Free_doctors), zeros))
